@@ -1,0 +1,18 @@
+name: "Apache ActiveMQ Artemis (JMS: 61616, Web Console: 8161)"
+services:
+  image: apache/activemq-artemis:latest-alpine
+  ports:
+    - "127.0.0.1:8161:8161"   # Web Admin Console
+    - "127.0.0.1:61616:61616" # Core / OpenWire / JMS / AMQP Broker Port
+    - "127.0.0.1:5672:5672"   # AMQP protocol
+    - "127.0.0.1:1883:1883"   # MQTT protocol
+    - "127.0.0.1:61613:61613" # STOMP protocol
+  environment:
+    ARTEMIS_USER: admin
+    ARTEMIS_PASSWORD: adminpassword
+    ANONYMOUS_LOGIN: "true"
+  volumes:
+    - activemq_data:/var/lib/artemis/data
+  restart: unless-stopped
+volumes:
+  activemq_data: {}

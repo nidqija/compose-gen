@@ -1,0 +1,7 @@
+name: "Mailpit SMTP & Web UI (SMTP: 1025, Web: 8025)"
+services:
+  image: axllent/mailpit:latest
+  ports:
+    - "127.0.0.1:1025:1025" # SMTP server (for apps to send test mail)
+    - "127.0.0.1:8025:8025" # Web UI (in-browser inbox)
+  restart: unless-stopped
