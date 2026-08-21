@@ -1,0 +1,15 @@
+name: "MinIO S3 Object Storage (API: 9000, Web Console: 9001)"
+services:
+  image: minio/minio:latest
+  command: server /data --console-address ":9001"
+  ports:
+    - "127.0.0.1:9000:9000" # S3 API Endpoint
+    - "127.0.0.1:9001:9001" # Web Admin Console
+  environment:
+    MINIO_ROOT_USER: minioadmin
+    MINIO_ROOT_PASSWORD: minioadminpassword
+  volumes:
+    - minio_data:/data
+  restart: unless-stopped
+volumes:
+  minio_data: {}
