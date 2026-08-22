@@ -205,15 +205,7 @@ func main(){
 
 	// init docker compose file
 	targetFile := "docker-compose.yml"
-
-	if _ , err := os.Stat(targetFile); err == nil {
-		println("docker-compose.yml already exists. Overwrite? (y/n): ")
-		confirm , _ := reader.ReadString('\n')
-		if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
-			println("Aborted.")
-			os.Exit(0)
-		}
-	}
+	composeConfig := make(map[string]interface{})
 
 	// init compose map with services
 	composeMap := map[string]interface{}{
@@ -222,6 +214,34 @@ func main(){
 	
 	// init volume map
 	volumeMap := make(map[string]interface{})
+
+	if _ , err := os.Stat(targetFile); err == nil {
+		println("docker-compose.yml already exists. Overwrite? (y/n): ")
+		confirm , _ := reader.ReadString('\n')
+		if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
+			
+			existingData , err := os.ReadFile(targetFile)
+
+			if err == nil {
+				_ = yaml.Unmarshal(existingData , &composeConfig)
+
+				if existingServices , ok := composeConfig["services"].(map[string]interface{}) ; ok {
+					for k , v := range existingServices{
+						composeMap["services"].(map[string]interface{})[k] = v
+					}
+				}
+
+				if existingVolumes , ok := composeConfig["volumes"].(map[string]interface{}) ; ok{
+					for k , v := range existingVolumes {
+						volumeMap[k] = v
+					}
+				}
+			}
+		}
+
+		
+	}
+
 
 	// loop through selected templates and add them to compose map
 	for _, s := range selected{
