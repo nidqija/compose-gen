@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-//go:embed templates/*.yml 
+//go:embed templates/*.yml templates/configs/*.conf
 var templatesFS embed.FS
 
 // struct to store key templates for docker-compose.yml file
@@ -28,6 +28,66 @@ type ServiceOptions struct {
 	Label string						`yaml:"label"`
 	Services map[string]interface{}		`yaml:"services"`
 	Volumes map[string]interface{}		`yaml:"volumes"`
+}
+
+
+
+func scaffoldExtraFiles(selected []ServiceOptions){
+
+	reader := bufio.NewReader(os.Stdin)
+	for _, s := range selected {
+		if s.Key == "nginx"{
+			targetConfig := "configs/nginx.conf"
+
+			
+			if _, err := os.Stat(targetConfig); err == nil{
+				
+				fmt.Print("Nginx config file already exists (" + targetConfig + "). Overwrite? (y/n) [default: n]: ")
+
+				confirm , err := reader.ReadString('\n')
+
+				if err != nil {
+					fmt.Println("Error reading input: " , err)
+					continue
+				}
+
+				confirm = strings.ToLower(strings.TrimSpace(confirm))
+
+				if confirm != "y" && confirm != "yes" {
+					fmt.Println("Keeping existing " + targetConfig)
+					continue
+				}
+
+			}
+
+			confData , err := templatesFS.ReadFile("templates/configs/nginx.conf")
+			if err != nil {
+				fmt.Println("Error reading template file: " , err)
+				continue
+			}
+
+			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			if err := os.WriteFile(targetConfig , confData , 0644); err != nil {
+				fmt.Println("Error writing config file: " , err)
+				continue
+			}
+
+			fmt.Println("Generated nginx.conf in " + targetConfig)
+
+			if err := os.MkdirAll("html" , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			
+		}
+
+		
+	}
 }
 
 // this function will load all template from templates folder
@@ -177,6 +237,9 @@ func main(){
 	if len(volumeMap) > 0 {
 		composeMap["volumes"] = volumeMap
 	}
+	
+	// call the function if nginx is chosen by the user
+	scaffoldExtraFiles(selected)
 
 	// marshal compose map to yaml format
 	outData , err := yaml.Marshal(composeMap)
