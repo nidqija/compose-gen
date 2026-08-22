@@ -1,0 +1,14 @@
+name: "PostgreSQL Database (Port 5432)"
+services:
+  image: postgres:16-alpine
+  ports:
+    - "127.0.0.1:5432:5432"
+  environment:
+    POSTGRES_DB: app_db
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgrespassword
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+  restart: unless-stopped
+volumes:
+  postgres_data: {}
