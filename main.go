@@ -86,6 +86,11 @@ func scaffoldExtraFiles(selected []ServiceOptions){
 			
 		}
 
+		/*
+		if s.Key == "otel-collector"{
+			targetConfig := 
+		} */
+
 		
 	}
 }
