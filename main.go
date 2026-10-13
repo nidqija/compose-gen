@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-//go:embed templates/*.yml 
+//go:embed templates/*.yml templates/configs/*
 var templatesFS embed.FS
 
 // struct to store key templates for docker-compose.yml file
@@ -28,6 +28,126 @@ type ServiceOptions struct {
 	Label string						`yaml:"label"`
 	Services map[string]interface{}		`yaml:"services"`
 	Volumes map[string]interface{}		`yaml:"volumes"`
+}
+
+
+
+func scaffoldExtraFiles(selected []ServiceOptions){
+
+	reader := bufio.NewReader(os.Stdin)
+	for _, s := range selected {
+		if s.Key == "nginx"{
+			targetConfig := "configs/nginx.conf"
+
+			
+			if _, err := os.Stat(targetConfig); err == nil{
+				
+				fmt.Print("Nginx config file already exists (" + targetConfig + "). Overwrite? (y/n) [default: n]: ")
+
+				confirm , err := reader.ReadString('\n')
+
+				if err != nil {
+					fmt.Println("Error reading input: " , err)
+					continue
+				}
+
+				confirm = strings.ToLower(strings.TrimSpace(confirm))
+
+				if confirm != "y" && confirm != "yes" {
+					fmt.Println("Keeping existing " + targetConfig)
+					continue
+				}
+
+			}
+
+			confData , err := templatesFS.ReadFile("templates/configs/nginx.conf")
+			if err != nil {
+				fmt.Println("Error reading template file: " , err)
+				continue
+			}
+
+			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			if err := os.WriteFile(targetConfig , confData , 0644); err != nil {
+				fmt.Println("Error writing config file: " , err)
+				continue
+			}
+
+			fmt.Println("Generated nginx.conf in " + targetConfig)
+
+			if err := os.MkdirAll("html" , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			
+		}
+
+		// detect if otel is selected
+		if s.Key == "otel"{
+
+			// init the target config file to copy
+			targetConfig := "configs/otel-collector-config.yaml"
+
+			// if the config file already exists in the filepath
+			// ask the dev to clarify
+			if _ , err := os.Stat(targetConfig); err == nil {
+				fmt.Println("Otel-collector config file already exists (" + targetConfig + "). Overwrite? (y/n) [default: n]: ")
+			
+				confirm , err := reader.ReadString('\n')
+
+				if err != nil {
+					fmt.Println("Error reading input: " , err)
+					continue
+				}
+
+				confirm = strings.ToLower(strings.TrimSpace(confirm))
+
+				// if answer is no , overwrite the file
+				if confirm != "y" && confirm != "yes" {
+					fmt.Println("Keeping existing " + targetConfig)
+					continue
+				}
+
+			}
+
+			// if yes , read the file line by line
+			confData , err := templatesFS.ReadFile("templates/configs/otel-collector-config.yaml")
+			if err != nil {
+				fmt.Println("Error reading template file: " , err)
+				continue
+			}
+
+			// create the directory if it doesn't exist
+			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			// copy and generate the config file
+			if err := os.WriteFile(targetConfig , confData , 0644); err != nil {
+				fmt.Println("Error writing config file: " , err)
+				continue
+			}
+
+			// log the success file name as success message
+			fmt.Println("Generated otel-collector-config.conf in " + targetConfig)
+
+			// if error , output the error that creating directory failed
+			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			
+
+		} 
+
+		
+	}
 }
 
 // this function will load all template from templates folder
@@ -145,15 +265,7 @@ func main(){
 
 	// init docker compose file
 	targetFile := "docker-compose.yml"
-
-	if _ , err := os.Stat(targetFile); err == nil {
-		println("docker-compose.yml already exists. Overwrite? (y/n): ")
-		confirm , _ := reader.ReadString('\n')
-		if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
-			println("Aborted.")
-			os.Exit(0)
-		}
-	}
+	composeConfig := make(map[string]interface{})
 
 	// init compose map with services
 	composeMap := map[string]interface{}{
@@ -162,6 +274,34 @@ func main(){
 	
 	// init volume map
 	volumeMap := make(map[string]interface{})
+
+	if _ , err := os.Stat(targetFile); err == nil {
+		println("docker-compose.yml already exists. Overwrite? (y/n): ")
+		confirm , _ := reader.ReadString('\n')
+		if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
+			
+			existingData , err := os.ReadFile(targetFile)
+
+			if err == nil {
+				_ = yaml.Unmarshal(existingData , &composeConfig)
+
+				if existingServices , ok := composeConfig["services"].(map[string]interface{}) ; ok {
+					for k , v := range existingServices{
+						composeMap["services"].(map[string]interface{})[k] = v
+					}
+				}
+
+				if existingVolumes , ok := composeConfig["volumes"].(map[string]interface{}) ; ok{
+					for k , v := range existingVolumes {
+						volumeMap[k] = v
+					}
+				}
+			}
+		}
+
+		
+	}
+
 
 	// loop through selected templates and add them to compose map
 	for _, s := range selected{
@@ -177,6 +317,9 @@ func main(){
 	if len(volumeMap) > 0 {
 		composeMap["volumes"] = volumeMap
 	}
+	
+	// call the function if nginx is chosen by the user
+	scaffoldExtraFiles(selected)
 
 	// marshal compose map to yaml format
 	outData , err := yaml.Marshal(composeMap)

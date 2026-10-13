@@ -1,0 +1,118 @@
+name: Deploy Changelog & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Custom version tag (e.g., v1.3.0). If empty, auto-detected from CHANGELOG.md.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release Notes & Tags
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version and Tag
+        id: get_version
+        run: |
+          # 1. Check if version was manually supplied via workflow_dispatch
+          if [ -n "${{ inputs.version }}" ]; then
+            TAG="${{ inputs.version }}"
+            [[ "$TAG" =~ ^v ]] || TAG="v$TAG"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+            echo "Using manual version tag: $TAG"
+            exit 0
+          fi
+
+          # 2. Check CHANGELOG.md for the latest version entry
+          CHANGELOG_VER=""
+          if [ -f "CHANGELOG.md" ]; then
+            CHANGELOG_VER=$(grep -m 1 -E '^## (Version|\[?[0-9]+\.[0-9]+\.[0-9]+)' CHANGELOG.md | grep -o -E '[0-9]+\.[0-9]+\.[0-9]+' || true)
+          fi
+
+          if [ -n "$CHANGELOG_VER" ] && ! git rev-parse "v$CHANGELOG_VER" >/dev/null 2>&1; then
+            TAG="v$CHANGELOG_VER"
+            echo "Found untagged version in CHANGELOG.md: $TAG"
+          else
+            # 3. Determine next tag based on git history
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -z "$LATEST_TAG" ]; then
+              TAG="v1.0.0"
+            else
+              CLEAN_VER="${LATEST_TAG#v}"
+              MAJOR=$(echo "$CLEAN_VER" | cut -d. -f1)
+              MINOR=$(echo "$CLEAN_VER" | cut -d. -f2)
+              PATCH=$(echo "$CLEAN_VER" | cut -d. -f3)
+
+              COMMITS=$(git log "$LATEST_TAG"..HEAD --oneline)
+              # If new feature detected, bump minor version; otherwise patch
+              if echo "$COMMITS" | grep -iqE '(feat|feature|add)'; then
+                MINOR=$((MINOR + 1))
+                PATCH=0
+              else
+                PATCH=$((PATCH + 1))
+              fi
+              TAG="v$MAJOR.$MINOR.$PATCH"
+            fi
+          fi
+
+          echo "Selected Tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Extract Release Notes from CHANGELOG.md
+        id: extract_notes
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          NOTES_FILE="RELEASE_NOTES.md"
+
+          if [ -f "CHANGELOG.md" ]; then
+            awk -v ver="$VERSION" '
+              BEGIN { found=0 }
+              $0 ~ "^## [^0-9]*" ver { found=1; next }
+              found && /^## / { found=0 }
+              found { print }
+            ' CHANGELOG.md > "$NOTES_FILE"
+          fi
+
+          if [ -s "$NOTES_FILE" ]; then
+            echo "Found specific release notes for version $VERSION in CHANGELOG.md"
+            echo "has_notes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No matching entry in CHANGELOG.md, will rely on auto-generated release notes"
+            echo "has_notes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and Push Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TAG="${{ steps.get_version.outputs.tag }}"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          else
+            echo "Tag $TAG already exists on remote, skipping tag push."
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: Release ${{ steps.get_version.outputs.tag }}
+          body_path: ${{ steps.extract_notes.outputs.has_notes == 'true' && 'RELEASE_NOTES.md' || '' }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
