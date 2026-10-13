@@ -1,7 +1,6 @@
 name: "OpenTelemetry Collector (gRPC: 4317, HTTP: 4318, Metrics: 8888)"
 
 services:
-  otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     ports:

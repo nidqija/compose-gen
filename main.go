@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-//go:embed templates/*.yml templates/configs/*.conf
+//go:embed templates/*.yml templates/configs/*
 var templatesFS embed.FS
 
 // struct to store key templates for docker-compose.yml file
@@ -86,10 +86,65 @@ func scaffoldExtraFiles(selected []ServiceOptions){
 			
 		}
 
-		/*
-		if s.Key == "otel-collector"{
-			targetConfig := 
-		} */
+		// detect if otel is selected
+		if s.Key == "otel"{
+
+			// init the target config file to copy
+			targetConfig := "configs/otel-collector-config.yaml"
+
+			// if the config file already exists in the filepath
+			// ask the dev to clarify
+			if _ , err := os.Stat(targetConfig); err == nil {
+				fmt.Println("Otel-collector config file already exists (" + targetConfig + "). Overwrite? (y/n) [default: n]: ")
+			
+				confirm , err := reader.ReadString('\n')
+
+				if err != nil {
+					fmt.Println("Error reading input: " , err)
+					continue
+				}
+
+				confirm = strings.ToLower(strings.TrimSpace(confirm))
+
+				// if answer is no , overwrite the file
+				if confirm != "y" && confirm != "yes" {
+					fmt.Println("Keeping existing " + targetConfig)
+					continue
+				}
+
+			}
+
+			// if yes , read the file line by line
+			confData , err := templatesFS.ReadFile("templates/configs/otel-collector-config.yaml")
+			if err != nil {
+				fmt.Println("Error reading template file: " , err)
+				continue
+			}
+
+			// create the directory if it doesn't exist
+			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			// copy and generate the config file
+			if err := os.WriteFile(targetConfig , confData , 0644); err != nil {
+				fmt.Println("Error writing config file: " , err)
+				continue
+			}
+
+			// log the success file name as success message
+			fmt.Println("Generated otel-collector-config.conf in " + targetConfig)
+
+			// if error , output the error that creating directory failed
+			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
+				fmt.Println("Error creating directory: " , err)
+				continue
+			}
+
+			
+
+		} 
 
 		
 	}
