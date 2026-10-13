@@ -1,13 +1,10 @@
 name: Deploy Changelog & Release
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
     inputs:
       version:
-        description: 'Custom version tag (e.g., v1.3.0). If empty, auto-detected.'
+        description: 'Custom version tag (e.g., v1.3.0). If empty, auto-detected from CHANGELOG.md.'
         required: false
         type: string
 
