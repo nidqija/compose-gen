@@ -4,6 +4,30 @@ This document tracks all services added or updated in **Compose Gen** based on t
 
 ---
 
+## Version 1.3.0 (`feat/cgen-3/add-otel-feature`)
+
+- **Release Date:** October 13, 2026
+- **Relevant Commits:** `bf5fb5d`, `64bc6b4`
+
+### OpenTelemetry Collector
+
+- **Service Name:** OpenTelemetry Collector (`otel`)
+- **Template File:** `templates/otel.yml`
+- **Config Template:** `templates/configs/otel-collector-config.yaml`
+- **Image:** `otel/opentelemetry-collector-contrib:latest`
+- **Command:** `["--config=/etc/otelcol-contrib/config.yaml"]`
+- **Exposed Ports:**
+  - `127.0.0.1:4317:4317` (OTLP gRPC Receiver)
+  - `127.0.0.1:4318:4318` (OTLP HTTP Receiver)
+  - `127.0.0.1:8888:8888` (Internal Collector Prometheus Metrics)
+  - `127.0.0.1:13133:13133` (Health Check Extension)
+- **Description:**
+  Introduced OpenTelemetry Collector Contrib service for unified collection, processing, and exporting of telemetry data (traces, metrics, and logs). Configured with dual OTLP receivers over gRPC and HTTP, an active health check extension, and internal metrics. When selected, the CLI automatically generates the `configs/otel-collector-config.yaml` file with overwrite prompt protection.
+- **Volume Mappings:**
+  - `./configs/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro`
+
+---
+
 ## Version 1.2.0 (`feature/cgen-1/add-nginx-feature`)
 
 - **Release Date:** August 22, 2026
@@ -98,6 +122,7 @@ This document tracks all services added or updated in **Compose Gen** based on t
 
 | Version Added | Service Name | Key / Image | Primary Purpose |
 | :--- | :--- | :--- | :--- |
+| `v1.3.0` | **OpenTelemetry Collector** | `otel/opentelemetry-collector-contrib:latest` | Telemetry collector (OTLP gRPC/HTTP) with config scaffolding |
 | `v1.2.0` | **Nginx Web Server** | `nginx:alpine` | Reverse proxy and static web server with config scaffolding |
 | `v1.1.0` | **MinIO** | `minio/minio:latest` | S3-compatible local object storage & web console |
 | `v1.0.0` | **Apache ActiveMQ Artemis** | `apache/activemq-artemis:latest-alpine` | Multi-protocol message broker (JMS, AMQP, MQTT, STOMP) |
