@@ -345,9 +345,15 @@ func runInteractiveGen(){
 
 
 
+// main function to run our subcommand wrapper
+// redirect to docker compose commands
 func main() {
 
+	// check if the number of arguments is more than 1
+	// else run the interactive mode
 	if len(os.Args) > 1 {
+		
+		// switch the subcommand
 		switch os.Args[1] {
 		case "up":
 			features.RunCompose("up" , []string{"-d"} , os.Args[2:])
