@@ -1,0 +1,11 @@
+
+
+name: "Cloudflare Tunnel"
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: standalone_cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://host.docker.internal:8025
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
