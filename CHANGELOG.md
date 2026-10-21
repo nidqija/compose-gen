@@ -4,6 +4,26 @@ This document tracks all services added or updated in **Compose Gen** based on t
 
 ---
 
+## Version 1.4.0 (`feature/cgen-5/added-cloudflare-tunnel`)
+
+- **Release Date:** October 22, 2026
+- **Relevant Commits:** `d6d09b3`, `c6b9c27`
+
+### Cloudflare Tunnel
+
+- **Service Name:** Cloudflare Tunnel (`cloudflared`)
+- **Template File:** `templates/cloudflared.yml`
+- **Image:** `cloudflare/cloudflared:latest`
+- **Container Name:** `standalone_cloudflared`
+- **Command:** `tunnel --no-autoupdate --url http://host.docker.internal:8025`
+- **Extra Hosts:**
+  - `host.docker.internal:host-gateway`
+- **Restart Policy:** `unless-stopped`
+- **Description:**
+  Added Cloudflare Tunnel (`cloudflared`) service to expose local services securely to the internet without opening inbound firewall ports. Configured with `host.docker.internal:host-gateway` for host network resolution to forward traffic directly to local development services (such as the Mailpit web UI on port 8025).
+
+---
+
 ## Version 1.3.0 (`feat/cgen-3/add-otel-feature`)
 
 - **Release Date:** October 13, 2026
@@ -122,6 +142,7 @@ This document tracks all services added or updated in **Compose Gen** based on t
 
 | Version Added | Service Name | Key / Image | Primary Purpose |
 | :--- | :--- | :--- | :--- |
+| `v1.4.0` | **Cloudflare Tunnel** | `cloudflare/cloudflared:latest` | Secure tunnel to expose local development services to the internet |
 | `v1.3.0` | **OpenTelemetry Collector** | `otel/opentelemetry-collector-contrib:latest` | Telemetry collector (OTLP gRPC/HTTP) with config scaffolding |
 | `v1.2.0` | **Nginx Web Server** | `nginx:alpine` | Reverse proxy and static web server with config scaffolding |
 | `v1.1.0` | **MinIO** | `minio/minio:latest` | S3-compatible local object storage & web console |
