@@ -1,5 +1,6 @@
 package main
 
+
 import (
 	"bufio"
 	"embed"
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"strconv"
+	features "compose-gen/features"
 )
 
 //go:embed templates/*.yml templates/configs/*
@@ -206,7 +208,7 @@ func loadTemplate()([]ServiceOptions , error){
 }
 
 
-func main(){
+func runInteractiveGen(){
 
 	// load templates
 	templates , err := loadTemplate()
@@ -341,4 +343,43 @@ func main(){
 	
 }
 
+
+
+// main function to run our subcommand wrapper
+// redirect to docker compose commands
+func main() {
+
+	// check if the number of arguments is more than 1
+	// else run the interactive mode
+	if len(os.Args) > 1 {
+		
+		// switch the subcommand
+		switch os.Args[1] {
+		case "up":
+			features.RunCompose("up" , []string{"-d"} , os.Args[2:])
+		case "down":
+			features.RunCompose("down" , nil , os.Args[2:])
+		case "build":
+			features.RunCompose("build", nil , os.Args[2:])
+		case "ps":
+			features.RunCompose("ps", nil , os.Args[2:])
+		case "stop":
+			features.RunCompose("stop" , nil , os.Args[2:])
+		case "logs":
+			features.RunCompose("logs", []string{"-f"} , os.Args[2:])
+		case "help":
+			features.PrintHelp()
+		default:
+			println("Unknown command: " + os.Args[1])
+			os.Exit(1)
+		}
+
+		return
+	}
+
+
+	runInteractiveGen();
+
+	
+}
 
