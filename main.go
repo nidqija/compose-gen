@@ -1,16 +1,16 @@
 package main
 
-
 import (
 	"bufio"
+	features "compose-gen/features"
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"fmt"
-	"gopkg.in/yaml.v3"
 	"strconv"
-	features "compose-gen/features"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 //go:embed templates/*.yml templates/configs/*
@@ -18,38 +18,34 @@ var templatesFS embed.FS
 
 // struct to store key templates for docker-compose.yml file
 type TemplateFile struct {
-	Name string							`yaml:"name"`
-	Services map[string]interface{}		`yaml:"services"`
-	Volumes map[string]interface{}		`yaml:"volumes"`
+	Name     string                 `yaml:"name"`
+	Services map[string]interface{} `yaml:"services"`
+	Volumes  map[string]interface{} `yaml:"volumes"`
 }
-
 
 // struct to store options for user to select from docker-compose.yml file
 type ServiceOptions struct {
-	Key string							`yaml:"key"`
-	Label string						`yaml:"label"`
-	Services map[string]interface{}		`yaml:"services"`
-	Volumes map[string]interface{}		`yaml:"volumes"`
+	Key      string                 `yaml:"key"`
+	Label    string                 `yaml:"label"`
+	Services map[string]interface{} `yaml:"services"`
+	Volumes  map[string]interface{} `yaml:"volumes"`
 }
 
-
-
-func scaffoldExtraFiles(selected []ServiceOptions){
+func scaffoldExtraFiles(selected []ServiceOptions) {
 
 	reader := bufio.NewReader(os.Stdin)
 	for _, s := range selected {
-		if s.Key == "nginx"{
+		if s.Key == "nginx" {
 			targetConfig := "configs/nginx.conf"
 
-			
-			if _, err := os.Stat(targetConfig); err == nil{
-				
+			if _, err := os.Stat(targetConfig); err == nil {
+
 				fmt.Print("Nginx config file already exists (" + targetConfig + "). Overwrite? (y/n) [default: n]: ")
 
-				confirm , err := reader.ReadString('\n')
+				confirm, err := reader.ReadString('\n')
 
 				if err != nil {
-					fmt.Println("Error reading input: " , err)
+					fmt.Println("Error reading input: ", err)
 					continue
 				}
 
@@ -62,47 +58,46 @@ func scaffoldExtraFiles(selected []ServiceOptions){
 
 			}
 
-			confData , err := templatesFS.ReadFile("templates/configs/nginx.conf")
+			confData, err := templatesFS.ReadFile("templates/configs/nginx.conf")
 			if err != nil {
-				fmt.Println("Error reading template file: " , err)
+				fmt.Println("Error reading template file: ", err)
 				continue
 			}
 
-			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
-				fmt.Println("Error creating directory: " , err)
+			if err := os.MkdirAll(filepath.Dir(targetConfig), 0755); err != nil {
+				fmt.Println("Error creating directory: ", err)
 				continue
 			}
 
-			if err := os.WriteFile(targetConfig , confData , 0644); err != nil {
-				fmt.Println("Error writing config file: " , err)
+			if err := os.WriteFile(targetConfig, confData, 0644); err != nil {
+				fmt.Println("Error writing config file: ", err)
 				continue
 			}
 
 			fmt.Println("Generated nginx.conf in " + targetConfig)
 
-			if err := os.MkdirAll("html" , 0755); err != nil {
-				fmt.Println("Error creating directory: " , err)
+			if err := os.MkdirAll("html", 0755); err != nil {
+				fmt.Println("Error creating directory: ", err)
 				continue
 			}
 
-			
 		}
 
 		// detect if otel is selected
-		if s.Key == "otel"{
+		if s.Key == "otel" {
 
 			// init the target config file to copy
 			targetConfig := "configs/otel-collector-config.yaml"
 
 			// if the config file already exists in the filepath
 			// ask the dev to clarify
-			if _ , err := os.Stat(targetConfig); err == nil {
+			if _, err := os.Stat(targetConfig); err == nil {
 				fmt.Println("Otel-collector config file already exists (" + targetConfig + "). Overwrite? (y/n) [default: n]: ")
-			
-				confirm , err := reader.ReadString('\n')
+
+				confirm, err := reader.ReadString('\n')
 
 				if err != nil {
-					fmt.Println("Error reading input: " , err)
+					fmt.Println("Error reading input: ", err)
 					continue
 				}
 
@@ -117,21 +112,21 @@ func scaffoldExtraFiles(selected []ServiceOptions){
 			}
 
 			// if yes , read the file line by line
-			confData , err := templatesFS.ReadFile("templates/configs/otel-collector-config.yaml")
+			confData, err := templatesFS.ReadFile("templates/configs/otel-collector-config.yaml")
 			if err != nil {
-				fmt.Println("Error reading template file: " , err)
+				fmt.Println("Error reading template file: ", err)
 				continue
 			}
 
 			// create the directory if it doesn't exist
-			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
-				fmt.Println("Error creating directory: " , err)
+			if err := os.MkdirAll(filepath.Dir(targetConfig), 0755); err != nil {
+				fmt.Println("Error creating directory: ", err)
 				continue
 			}
 
 			// copy and generate the config file
-			if err := os.WriteFile(targetConfig , confData , 0644); err != nil {
-				fmt.Println("Error writing config file: " , err)
+			if err := os.WriteFile(targetConfig, confData, 0644); err != nil {
+				fmt.Println("Error writing config file: ", err)
 				continue
 			}
 
@@ -139,36 +134,52 @@ func scaffoldExtraFiles(selected []ServiceOptions){
 			fmt.Println("Generated otel-collector-config.conf in " + targetConfig)
 
 			// if error , output the error that creating directory failed
-			if err := os.MkdirAll(filepath.Dir(targetConfig) , 0755); err != nil {
-				fmt.Println("Error creating directory: " , err)
+			if err := os.MkdirAll(filepath.Dir(targetConfig), 0755); err != nil {
+				fmt.Println("Error creating directory: ", err)
 				continue
 			}
 
-			
+		}
 
-		} 
+		if s.Key == "cloudflared" {
+			targetEnv := "configs/.env"
 
-		
+			if _, err := os.Stat(targetEnv); os.IsNotExist(err) {
+				defaultEnvContent := "#Base URL for Mobile & Web Services\nAPP_BASE_URL=http://localhost:8025\n"
+
+				if err := os.MkdirAll(filepath.Dir(targetEnv), 0755); err != nil {
+					fmt.Println("Error creating directory: ", err)
+					continue
+				}
+
+				if err := os.WriteFile(targetEnv, []byte(defaultEnvContent), 0644); err != nil {
+					fmt.Println("Error writing config file: ", err)
+					continue
+				}
+
+				fmt.Println("Generated " + targetEnv)
+			}
+		}
+
 	}
 }
 
 // this function will load all template from templates folder
-func loadTemplate()([]ServiceOptions , error){
-	entries , err := templatesFS.ReadDir("templates")
+func loadTemplate() ([]ServiceOptions, error) {
+	entries, err := templatesFS.ReadDir("templates")
 
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
-
 
 	var options []ServiceOptions
 
 	for _, entry := range entries {
-		if entry.IsDir(){
+		if entry.IsDir() {
 			continue
 		}
 
-		data , err := templatesFS.ReadFile("templates/" + entry.Name())
+		data, err := templatesFS.ReadFile("templates/" + entry.Name())
 		if err != nil {
 			continue
 		}
@@ -176,42 +187,37 @@ func loadTemplate()([]ServiceOptions , error){
 		var tpl TemplateFile
 
 		// unmarshal template file into tpl struct
-		if err := yaml.Unmarshal(data , &tpl); err != nil {
+		if err := yaml.Unmarshal(data, &tpl); err != nil {
 			fmt.Printf("Warning: failed to parse template %s: %v\n", entry.Name(), err)
 			continue
 		}
 
 		// extract key and label
 		ext := filepath.Ext(entry.Name())
-		key := strings.TrimSuffix(entry.Name() , ext)
+		key := strings.TrimSuffix(entry.Name(), ext)
 		label := tpl.Name
 
-		
 		if label == "" {
 			label = key
 		}
 
 		// load options by mapping to ServiceOptions struct
-		options = append(options , ServiceOptions{
-			Key : key,
-			Label : label,
-			Services : tpl.Services,
-			Volumes : tpl.Volumes,
+		options = append(options, ServiceOptions{
+			Key:      key,
+			Label:    label,
+			Services: tpl.Services,
+			Volumes:  tpl.Volumes,
 		})
 
-
-
-		
 	}
 
 	return options, nil
 }
 
-
-func runInteractiveGen(){
+func runInteractiveGen() {
 
 	// load templates
-	templates , err := loadTemplate()
+	templates, err := loadTemplate()
 
 	if err != nil || len(templates) == 0 {
 		println("No templates found")
@@ -223,16 +229,14 @@ func runInteractiveGen(){
 
 	// print available templates
 	fmt.Println("Available templates:")
-	for i , tpl := range templates {
-		fmt.Printf("%d. %s\n" , i + 1 , tpl.Label)
+	for i, tpl := range templates {
+		fmt.Printf("%d. %s\n", i+1, tpl.Label)
 	}
 
 	fmt.Print("\nEnter choices: ")
 
-
-	// read user input 
-	input , _ := reader.ReadString('\n')
-
+	// read user input
+	input, _ := reader.ReadString('\n')
 
 	input = strings.TrimSpace(input)
 
@@ -244,19 +248,19 @@ func runInteractiveGen(){
 	var selected []ServiceOptions
 
 	// if user input is all , select all templates
-	if strings.ToLower(input ) == "all"{
+	if strings.ToLower(input) == "all" {
 		selected = templates
 	} else {
 		// if user input is comma separated , split and select templates
-		indices := strings.Split(input , ",")
-		for _, indexStr := range indices{
-			idx , err := strconv.Atoi(strings.TrimSpace(indexStr))
+		indices := strings.Split(input, ",")
+		for _, indexStr := range indices {
+			idx, err := strconv.Atoi(strings.TrimSpace(indexStr))
 			if err != nil || idx < 1 || idx > len(templates) {
 				println("Invalid choice: " + indexStr)
 				os.Exit(1)
 			}
 
-			selected = append(selected , templates[idx - 1])
+			selected = append(selected, templates[idx-1])
 		}
 	}
 
@@ -273,40 +277,38 @@ func runInteractiveGen(){
 	composeMap := map[string]interface{}{
 		"services": make(map[string]interface{}),
 	}
-	
+
 	// init volume map
 	volumeMap := make(map[string]interface{})
 
-	if _ , err := os.Stat(targetFile); err == nil {
+	if _, err := os.Stat(targetFile); err == nil {
 		println("docker-compose.yml already exists. Overwrite? (y/n): ")
-		confirm , _ := reader.ReadString('\n')
+		confirm, _ := reader.ReadString('\n')
 		if strings.ToLower(strings.TrimSpace(confirm)) != "y" {
-			
-			existingData , err := os.ReadFile(targetFile)
+
+			existingData, err := os.ReadFile(targetFile)
 
 			if err == nil {
-				_ = yaml.Unmarshal(existingData , &composeConfig)
+				_ = yaml.Unmarshal(existingData, &composeConfig)
 
-				if existingServices , ok := composeConfig["services"].(map[string]interface{}) ; ok {
-					for k , v := range existingServices{
+				if existingServices, ok := composeConfig["services"].(map[string]interface{}); ok {
+					for k, v := range existingServices {
 						composeMap["services"].(map[string]interface{})[k] = v
 					}
 				}
 
-				if existingVolumes , ok := composeConfig["volumes"].(map[string]interface{}) ; ok{
-					for k , v := range existingVolumes {
+				if existingVolumes, ok := composeConfig["volumes"].(map[string]interface{}); ok {
+					for k, v := range existingVolumes {
 						volumeMap[k] = v
 					}
 				}
 			}
 		}
 
-		
 	}
 
-
 	// loop through selected templates and add them to compose map
-	for _, s := range selected{
+	for _, s := range selected {
 		composeMap["services"].(map[string]interface{})[s.Key] = s.Services
 
 		if s.Volumes != nil {
@@ -319,12 +321,12 @@ func runInteractiveGen(){
 	if len(volumeMap) > 0 {
 		composeMap["volumes"] = volumeMap
 	}
-	
+
 	// call the function if nginx is chosen by the user
 	scaffoldExtraFiles(selected)
 
 	// marshal compose map to yaml format
-	outData , err := yaml.Marshal(composeMap)
+	outData, err := yaml.Marshal(composeMap)
 
 	if err != nil {
 		println("Failed to marshal docker-compose.yml: " + err.Error())
@@ -332,18 +334,14 @@ func runInteractiveGen(){
 	}
 
 	// write docker compose file with chosen services
-	if err := os.WriteFile(targetFile , outData , 0644); err != nil {
+	if err := os.WriteFile(targetFile, outData, 0644); err != nil {
 		println("Failed to write docker-compose.yml: " + err.Error())
 		os.Exit(1)
 	}
 
-	fmt.Println("docker-compose.yml generated successfully in " + targetFile )
+	fmt.Println("docker-compose.yml generated successfully in " + targetFile)
 
-
-	
 }
-
-
 
 // main function to run our subcommand wrapper
 // redirect to docker compose commands
@@ -352,21 +350,21 @@ func main() {
 	// check if the number of arguments is more than 1
 	// else run the interactive mode
 	if len(os.Args) > 1 {
-		
+
 		// switch the subcommand
 		switch os.Args[1] {
 		case "up":
-			features.RunCompose("up" , []string{"-d"} , os.Args[2:])
+			features.RunCompose("up", []string{"-d"}, os.Args[2:])
 		case "down":
-			features.RunCompose("down" , nil , os.Args[2:])
+			features.RunCompose("down", nil, os.Args[2:])
 		case "build":
-			features.RunCompose("build", nil , os.Args[2:])
+			features.RunCompose("build", nil, os.Args[2:])
 		case "ps":
-			features.RunCompose("ps", nil , os.Args[2:])
+			features.RunCompose("ps", nil, os.Args[2:])
 		case "stop":
-			features.RunCompose("stop" , nil , os.Args[2:])
+			features.RunCompose("stop", nil, os.Args[2:])
 		case "logs":
-			features.RunCompose("logs", []string{"-f"} , os.Args[2:])
+			features.RunCompose("logs", []string{"-f"}, os.Args[2:])
 		case "help":
 			features.PrintHelp()
 		default:
@@ -377,9 +375,6 @@ func main() {
 		return
 	}
 
+	runInteractiveGen()
 
-	runInteractiveGen();
-
-	
 }
-

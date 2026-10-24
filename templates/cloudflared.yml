@@ -3,9 +3,14 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: standalone_cloudflared
     restart: unless-stopped
-    command: tunnel --no-autoupdate --url http://host.docker.internal:8025
+    command: tunnel --no-autoupdate --logfile /app/logs/tunnel.log --url http://host.docker.internal:8025
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./logs:/app/logs
+
+
+
 
     
 
