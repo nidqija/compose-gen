@@ -355,6 +355,8 @@ func main() {
 		switch os.Args[1] {
 		case "up":
 			features.RunCompose("up", []string{"-d"}, os.Args[2:])
+			// call the function if cloudflared is chosen by the user
+			features.FetchTunnelURL()
 		case "down":
 			features.RunCompose("down", nil, os.Args[2:])
 		case "build":

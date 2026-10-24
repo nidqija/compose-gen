@@ -5,6 +5,10 @@ import (
 	"os/exec"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
+	"time"
+
 )
 
 // function to run docker compose with given subcommands and arguments
@@ -64,6 +68,129 @@ func RunCompose(subcmd string , defaultArgs[] string , userArgs[] string){
 
 	
 
+}
+
+
+// function to read the generated docker-compose.yml and cloudflare log 
+// and extract the cloudflare tunnel URL
+// and update the .env file with the tunnel URL
+func FetchTunnelURL(){
+
+	// read docker-compose.yml file
+	composeData , err := os.ReadFile("docker-compose.yml")
+
+
+	// if there is no cloudflare service being found from dockerfile
+	// return 
+	if err != nil || !strings.Contains(string(composeData), "cloudflare"){
+		return
+	}
+
+
+	// set target env file path
+	targetEnv := "configs/.env"
+
+	// check if the target env file path is exist , if not , return
+	if _, err := os.Stat(targetEnv);os.IsNotExist(err){
+		fmt.Println("Filepath is not exist")
+		return
+	}
+    
+	// regex to find cloudflare tunnel URL
+	re := regexp.MustCompile(`https://[a-zA-Z0-9-]+\.trycloudflare\.com`)
+
+	// log the process
+	fmt.Println("Fetching Cloudflare Tunnel URL...")
+
+
+	// init a timeout to find the generated url
+	timeout := time.After(10 * time.Second)
+
+	// ticker to check the generated url for every 500 millisecond
+	ticker := time.NewTicker(500 * time.Millisecond)
+
+	// stop the ticker when the function is done
+	defer ticker.Stop()
+
+
+	// init a tunnel url variable
+	var tunnelURL string 
+
+	// start the ticker
+	for {
+
+		// we use select as switches
+		// it is like an if else statement
+		// case 
+		select {
+
+		// case if timeout ( not found )
+		case <- timeout:
+			fmt.Println("\nTimed out waiting for Cloudflare Tunnel URL")
+			return
+
+		// case if ticker is triggered ( found )
+		case <-ticker.C:
+			fmt.Print(".")
+
+			// read the generated tunnel log
+		if data , err := os.ReadFile("logs/tunnel.log"); err == nil {
+			if match := re.FindString(string(data)); match != "" {
+				tunnelURL = match
+				break
+			}
+		}
+		}
+
+		// if tunnel url is found , break the loop
+		if tunnelURL != "" {
+			break
+		}
+
+	
+	}
+
+	// print the found tunnel url from the logs for debugging
+	fmt.Println("\nCloudflare Tunnel URL: ", tunnelURL)
+
+	// read the target env file
+	data , err := os.ReadFile(targetEnv)
+
+	if err != nil {
+		fmt.Println("Error reading env file: ", err)
+		return
+	}
+
+	// init content variable by converting bytes into string
+	content := string(data)
+
+	// init a regex to find the url line in the env file
+	urlLineRegex := regexp.MustCompile(`(?m)^APP_BASE_URL=.*$`)
+
+	// init a updated content variable
+	var updatedContent string
+	
+
+	// check if the url line exists in the env file
+	if urlLineRegex.MatchString(content){
+
+		// if found , replace the url line with the new tunnel url found
+		updatedContent = urlLineRegex.ReplaceAllString(content , "APP_BASE_URL="+tunnelURL)
+	} else {
+
+		// if not found , append the new tunnel url in the env file
+		updatedContent = strings.TrimRight(content , "\n") + "\n" + "APP_BASE_URL="+ tunnelURL
+	}
+
+	// write the updated content into the env file
+	if err := os.WriteFile(targetEnv, []byte(updatedContent), 0644); err != nil {
+		fmt.Println("Error writing env file: ", err)
+		return
+	}
+
+	// log the updated url for debugging purposes
+	fmt.Printf("Updated %s with Cloudflare Tunnel URL with APP_BASE_URL=%s\n" , targetEnv , tunnelURL)
+	
 }
 
 
