@@ -6,8 +6,8 @@ This document tracks all services added or updated in **Compose Gen** based on t
 
 ## Version 1.4.0 (`feature/cgen-5/added-cloudflare-tunnel`)
 
-- **Release Date:** October 22, 2026
-- **Relevant Commits:** `d6d09b3`, `c6b9c27`
+- **Release Date:** October 24, 2026
+- **Relevant Commits:** `d6d09b3`, `c6b9c27`, `f75f592`, `c8330bb`
 
 ### Cloudflare Tunnel
 
@@ -15,12 +15,19 @@ This document tracks all services added or updated in **Compose Gen** based on t
 - **Template File:** `templates/cloudflared.yml`
 - **Image:** `cloudflare/cloudflared:latest`
 - **Container Name:** `standalone_cloudflared`
-- **Command:** `tunnel --no-autoupdate --url http://host.docker.internal:8025`
+- **Command:** `tunnel --no-autoupdate --logfile /app/logs/tunnel.log --url http://host.docker.internal:8025`
+- **Volume Mappings:**
+  - `./logs:/app/logs`
 - **Extra Hosts:**
   - `host.docker.internal:host-gateway`
 - **Restart Policy:** `unless-stopped`
 - **Description:**
-  Added Cloudflare Tunnel (`cloudflared`) service to expose local services securely to the internet without opening inbound firewall ports. Configured with `host.docker.internal:host-gateway` for host network resolution to forward traffic directly to local development services (such as the Mailpit web UI on port 8025).
+  Added Cloudflare Tunnel (`cloudflared`) service to expose local development services securely to the internet without opening inbound firewall ports or configuring router port forwarding. Configured with `host.docker.internal:host-gateway` for host network resolution to forward traffic directly to local development services (such as the Mailpit web UI on port 8025). Provides instant HTTPS and public domain connectivity for external clients, mobile app testing, and third-party webhooks.
+- **Dynamic URL Extraction & Synchronization:**
+  - **Log Output:** Configured `templates/cloudflared.yml` with `--logfile /app/logs/tunnel.log` mounted to `./logs:/app/logs` so runtime tunnel logs are accessible to the host.
+  - **Automatic URL Parsing (`FetchTunnelURL`):** Implemented `FetchTunnelURL()` in `features/commands.go` to scan `logs/tunnel.log` with a 10-second timeout, extracting the generated `https://[a-zA-Z0-9-]+\.trycloudflare\.com` URL via regex.
+  - **Environment Configuration:** Automatically creates or updates `APP_BASE_URL` in `configs/.env` with the active tunnel URL.
+  - **CLI Lifecycle Integration:** Integrated `FetchTunnelURL()` into `compose-gen up` in `main.go` to automatically discover and write the tunnel URL upon service startup.
 
 ---
 
