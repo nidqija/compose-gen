@@ -1,0 +1,14 @@
+name: "Grafana-K6 Load Testing (Web UI: 5665)"
+services:
+  image: grafana/k6:latest
+  container_name: k6_load_test
+  environment:
+    - API_URL=https://test.k6.io
+    - K6_WEB_DASHBOARD=true
+    - K6_WEB_DASHBOARD_PORT=5665
+    - K6_WEB_DASHBOARD_HOST=0.0.0.0
+  ports:
+    - "5665:5665"
+  volumes:
+    - ./tests/k6:/scripts
+  entrypoint: ["k6", "run", "/scripts/load-test.js"]

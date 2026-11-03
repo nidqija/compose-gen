@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	features "compose-gen/features"
+	"compose-gen/tui"
 	"embed"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"gopkg.in/yaml.v3"
 )
 
@@ -159,6 +161,48 @@ func scaffoldExtraFiles(selected []ServiceOptions) {
 
 				fmt.Println("Generated " + targetEnv)
 			}
+		}
+
+
+		if s.Key == "grafana-k6" {
+			targetScript := "tests/k6/load-test.js"
+
+			if _ , err := os.Stat(targetScript) ; err == nil {
+				fmt.Println("K6 Test Scripts already existed (" + targetScript + "). Overwrite? (y/n) [default: n]")
+
+				confirm, err := reader.ReadString('\n')
+
+				if err != nil {
+					fmt.Println("Error reading input:" , err)
+					continue
+				}
+
+				confirm = strings.ToLower(strings.TrimSpace(confirm))
+				if confirm != "y" && confirm != "yes"{
+					fmt.Println("Keep existing " + targetScript)
+					continue
+				}
+			}
+
+			scriptData , err := templatesFS.ReadFile("templates/configs/load-test.js")
+			if err != nil {
+				fmt.Println("Error reading template file:" , err)
+				continue
+			}
+
+			if err := os.MkdirAll(filepath.Dir(targetScript), 0755); err != nil {
+				fmt.Println("Error creating directory:" , err)
+				continue
+			}
+
+			if err := os.WriteFile(targetScript, scriptData , 0644); err != nil {
+				fmt.Println("Error writing test scripts:", err)
+				continue
+			}
+
+			fmt.Println("Generated sample k6 test script in " + targetScript)
+
+
 		}
 
 	}
@@ -367,8 +411,15 @@ func main() {
 			features.RunCompose("stop", nil, os.Args[2:])
 		case "logs":
 			features.RunCompose("logs", []string{"-f"}, os.Args[2:])
+		case "--plain", "--legacy":
+			runInteractiveGen()
+			return
+		case "tui":
+			// explicitly run TUI mode
+			break
 		case "help":
 			features.PrintHelp()
+			return
 		default:
 			println("Unknown command: " + os.Args[1])
 			os.Exit(1)
@@ -377,6 +428,18 @@ func main() {
 		return
 	}
 
-	runInteractiveGen()
+	// Launch modern Bubble Tea interactive generator
+	model, err := tui.NewModel(templatesFS)
+	if err != nil {
+		fmt.Printf("Error initializing TUI: %v\nFalling back to plain mode...\n", err)
+		runInteractiveGen()
+		return
+	}
+
+	p := tea.NewProgram(model)
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error running interactive TUI: %v\n", err)
+		os.Exit(1)
+	}
 
 }

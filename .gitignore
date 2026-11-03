@@ -1,4 +1,6 @@
 main.exe
+compose-gen.exe
+*.exe
 docker-compose.yml
 .agents/
 sandbox/
