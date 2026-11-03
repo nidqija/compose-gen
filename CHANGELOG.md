@@ -4,6 +4,44 @@ This document tracks all services added or updated in **Compose Gen** based on t
 
 ---
 
+## Version 1.5.0 (`feature/cgen-6/add-grafana-k6`)
+
+- **Release Date:** November 3, 2026
+
+### Grafana-K6 Load Testing & Interactive Bubble Tea TUI
+
+#### Grafana-K6 Load Testing Service
+
+- **Service Name:** Grafana-K6 Load Testing (`grafana-k6`)
+- **Template File:** `templates/grafana-k6.yml`
+- **Config Template:** `templates/configs/load-test.js`
+- **Image:** `grafana/k6:latest`
+- **Container Name:** `k6_load_test`
+- **Exposed Ports:**
+  - `5665:5665` (K6 Built-in Real-Time Web Dashboard)
+- **Environment Variables:**
+  - `API_URL=https://test.k6.io`
+  - `K6_WEB_DASHBOARD=true`
+  - `K6_WEB_DASHBOARD_PORT=5665`
+  - `K6_WEB_DASHBOARD_HOST=0.0.0.0`
+- **Volume Mappings:**
+  - `./tests/k6:/scripts`
+- **Entrypoint:** `["k6", "run", "/scripts/load-test.js"]`
+- **Description:**
+  Introduced Grafana-K6 load and performance testing service with built-in real-time web dashboard visualization. Includes an automated scaffolding flow: when selected, `compose-gen` automatically scaffolds a starter test script at `tests/k6/load-test.js` configured with virtual users, test durations, and threshold validations against `https://test.k6.io`. Enables the container to run successfully out-of-the-box on the very first try without crashing due to missing script mounts.
+
+#### Interactive Terminal UI (Charm Bubble Tea & Lip Gloss)
+
+- **Bubble Tea TUI (`tui/`):** Re-architected the interactive CLI workflow with a modern, cyberpunk-inspired terminal user interface powered by Charm's `bubbletea`, `lipgloss`, and `bubbles`.
+- **Big ASCII Art Title:** Added a dynamic cyber slant `COMPOSE-GEN` ASCII title banner featuring a vertical neon gradient (Electric Cyan to Neon Violet), with automatic responsive fallback to a compact 52-column banner on narrower terminal windows.
+- **Interactive Multi-Select Checklist:** Keyboard navigation (`↑/↓` or `j/k`, `Space`/`x` to toggle, `a` for select all, `Enter` to generate) with selected item counters.
+- **Live Service Inspector Card:** Real-time side panel previewing image tags, port mappings, volumes, environment variables, and auto-scaffolded files for the currently hovered service.
+- **Merge & Overwrite Modal:** Safe conflict resolution dialog when `docker-compose.yml` already exists, allowing users to choose between `Merge Services`, `Overwrite Completely`, or `Cancel`.
+- **Post-Generation Celebration Screen:** Detailed summary displaying activated services, scaffolded config paths, preserved files, and next-step commands (`compose-gen up`, `ps`, `logs`, `down`).
+- **Backward Compatibility:** Preserved legacy plain prompt via `compose-gen --plain` or `--legacy` flags and updated command help output.
+
+---
+
 ## Version 1.4.0 (`feature/cgen-5/added-cloudflare-tunnel`)
 
 - **Release Date:** October 24, 2026

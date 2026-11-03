@@ -135,19 +135,18 @@ func FetchTunnelURL(){
 
 			// read the generated tunnel log
 		if data , err := os.ReadFile("logs/tunnel.log"); err == nil {
-			if match := re.FindString(string(data)); match != "" {
-				tunnelURL = match
+			  matches := re.FindAllString(string(data) , -1)
+			  if len(matches) > 0 {
+				tunnelURL = matches[len(matches)-1]
 				break
+			  }
 			}
-		}
 		}
 
 		// if tunnel url is found , break the loop
 		if tunnelURL != "" {
 			break
 		}
-
-	
 	}
 
 	// print the found tunnel url from the logs for debugging
@@ -199,7 +198,10 @@ func FetchTunnelURL(){
 // and the commands that can be run
 func PrintHelp() {
 	fmt.Println("Usage: ./compose-gen [command]")
-	fmt.Println("Commands:")
+	fmt.Println("Interactive:")
+	fmt.Println("  (no args)   Launch interactive Bubble Tea TUI generator")
+	fmt.Println("  --plain     Launch simple text-based generator")
+	fmt.Println("\nCommands:")
 	fmt.Println("  up          Start services")
 	fmt.Println("  down        Stop services")
 	fmt.Println("  build       Build services")
